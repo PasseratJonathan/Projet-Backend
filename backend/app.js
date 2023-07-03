@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const path = require('path')
 const cors = require('cors')
 
-const stuffRoutes = require('./routes/stuff')
+const bookRoutes = require('./routes/books')
 const userRoutes = require('./routes/user')
 
 mongoose.connect('mongodb+srv://Jo:TTvcKPG54AKu4UZ8@jo.lfzl16r.mongodb.net/test?retryWrites=true&w=majority',
@@ -28,13 +28,13 @@ app.use((req, res, next) => {
 app.use(cors({
   origin: '*'
 }));
-app.use('/api/stuff', stuffRoutes)
+app.use('/api/books', bookRoutes)
 app.use('/api/auth', userRoutes)
 app.use('/images', express.static(path.join(__dirname, 'images')))
 
 
-app.listen(3001, () => {
-  console.log('port 3001')
+app.listen(3002, () => {
+  console.log('port 3002')
 })
 
 module.exports = app;

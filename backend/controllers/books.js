@@ -7,7 +7,7 @@ exports.createBook = (req, res, next) => {
     delete bookObject._userId
     const book = new Book({
       ...bookObject,
-      userId: req.auth.uderId,
+      userId: req.auth.userId,
       imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
     })
 
@@ -19,13 +19,13 @@ exports.createBook = (req, res, next) => {
 exports.modifyBook = (req, res, next) => {
     const bookObject = reqfile ? {
       ...JSON.parse(req.body.book),
-      imageUrl: `${req.protocol}://{req.get('host)}/images/${req.file.filename}`
+      imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
     } : { ...req.body }
 
     delete bookObject._userId 
     Book.findOne({_id: req.params.id})
-    .then((thing) =>{
-      if (thing.userId != req.auth.userId) {
+    .then((book) =>{
+      if (book.userId != req.auth.userId) {
         res.status(401).json({ message: 'Non-autorisé'})
       } else {
         Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})

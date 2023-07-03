@@ -39,6 +39,9 @@ export async function getBooks() {
     const response = await axios({
       method: 'GET',
       url: `${API_ROUTES.BOOKS}`,
+      headers: {
+        Authorization: `Bearer ${getFromLocalStorage('token')}`,
+      },
     });
     // eslint-disable-next-line array-callback-return
     const books = formatBooks(response.data);
@@ -130,6 +133,8 @@ export async function addBook(data) {
   const bodyFormData = new FormData();
   bodyFormData.append('book', JSON.stringify(book));
   bodyFormData.append('image', data.file[0]);
+  console.log(JSON.stringify(book));
+  console.log(data.file[0]);
 
   try {
     return await axios({
@@ -147,8 +152,8 @@ export async function addBook(data) {
 }
 
 export async function updateBook(data, id) {
+  console.log(id);
   const userId = localStorage.getItem('userId');
-
   let newData;
   const book = {
     userId,
@@ -169,7 +174,7 @@ export async function updateBook(data, id) {
   try {
     const newBook = await axios({
       method: 'put',
-      url: `${API_ROUTES.BOOKS}/${id}`,
+      url: `${API_ROUTES.BOOKS}/${userId}`,
       data: newData,
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
