@@ -10,21 +10,21 @@ exports.createBook = (req, res, next) => {
       userId: req.auth.userId,
       imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
     })
-
+    
     book.save()
     .then(() => { res.status(201).json({message: 'Objet enregistré'})})
     .catch(error => { res.status(400).json({ error })})
   }
 
 exports.modifyBook = (req, res, next) => {
-    const bookObject = reqfile ? {
+    const bookObject = req.file ? {
       ...JSON.parse(req.body.book),
       imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
     } : { ...req.body }
 
     delete bookObject._userId 
     Book.findOne({_id: req.params.id})
-    .then((book) =>{
+    .then((book) => {
       if (book.userId != req.auth.userId) {
         res.status(401).json({ message: 'Non-autorisé'})
       } else {
@@ -33,10 +33,13 @@ exports.modifyBook = (req, res, next) => {
         .catch(error => res.status(401).json({ error }))
       }
     })
+    .catch((error) => {
+      res.status(400).json({ error })
+    })
   }
 
 exports.deleteBook = (req, res, next) => {
-    Book.deleteOne({ _id: req.params.id })
+    Book.findOne({ _id: req.params.id })
     .then(book => {
       if (book.userId != req.auth.userId) {
         res.status(401).json({message: 'Non autorisé' })
@@ -47,7 +50,6 @@ exports.deleteBook = (req, res, next) => {
           .then(() => { res.status(200).json({message: 'Objet supprimé !'})})
           .catch(error => res.status(401).json({ error }))
         })
-
       }
     })
     .catch(error => {
@@ -63,6 +65,7 @@ exports.getOneBook = (req, res, next) => {
 
 exports.getAllBooks = (req, res, next) => {
     Book.find()
-    .then(books => res.status(200).json(books))
+    .then(books => {console.log(books);res.status(200).json(books)}) 
     .catch(error => res.status(400).json({ error }))
+    
   }

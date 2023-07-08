@@ -23,18 +23,21 @@ app.use((req, res, next) => {
   next();
 });
 
-//app.options('*', cors());
 
 app.use(cors({
   origin: '*'
 }));
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Erreur serveur' });
+});
 app.use('/api/books', bookRoutes)
 app.use('/api/auth', userRoutes)
 app.use('/images', express.static(path.join(__dirname, 'images')))
 
 
-app.listen(3002, () => {
-  console.log('port 3002')
+app.listen(8080, () => {
+  console.log('port 8080')
 })
 
 module.exports = app;

@@ -47,7 +47,6 @@ function BookForm({ book, validate }) {
     // When we create a new book
     console.log(!book);
     if (!book) {
-      alert('ui');
       if (!data.file[0]) {
         alert('Vous devez ajouter une image');
       }
@@ -58,7 +57,6 @@ function BookForm({ book, validate }) {
         alert(newBook.message);
       }
     } else {
-      alert('non');
       const updatedBook = await updateBook(data, data.id);
       if (!updatedBook.error) {
         navigate('/');

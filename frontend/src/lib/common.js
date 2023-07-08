@@ -43,6 +43,7 @@ export async function getBooks() {
         Authorization: `Bearer ${getFromLocalStorage('token')}`,
       },
     });
+    console.log(response);
     // eslint-disable-next-line array-callback-return
     const books = formatBooks(response.data);
     return books;
@@ -143,6 +144,7 @@ export async function addBook(data) {
       data: bodyFormData,
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'multipart/form-data',
       },
     });
   } catch (err) {
