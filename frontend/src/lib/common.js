@@ -43,7 +43,6 @@ export async function getBooks() {
         Authorization: `Bearer ${getFromLocalStorage('token')}`,
       },
     });
-    console.log(response);
     // eslint-disable-next-line array-callback-return
     const books = formatBooks(response.data);
     return books;
@@ -58,6 +57,9 @@ export async function getBook(id) {
     const response = await axios({
       method: 'GET',
       url: `${API_ROUTES.BOOKS}/${id}`,
+      headers: {
+        Authorization: `Bearer ${getFromLocalStorage('token')}`,
+      },
     });
     const book = response.data;
     // eslint-disable-next-line no-underscore-dangle
@@ -74,6 +76,9 @@ export async function getBestRatedBooks() {
     const response = await axios({
       method: 'GET',
       url: `${API_ROUTES.BEST_RATED}`,
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
     });
     return formatBooks(response.data);
   } catch (e) {
@@ -134,8 +139,6 @@ export async function addBook(data) {
   const bodyFormData = new FormData();
   bodyFormData.append('book', JSON.stringify(book));
   bodyFormData.append('image', data.file[0]);
-  console.log(JSON.stringify(book));
-  console.log(data.file[0]);
 
   try {
     return await axios({
@@ -153,8 +156,7 @@ export async function addBook(data) {
   }
 }
 
-export async function updateBook(data, id) {
-  console.log(id);
+export async function updateBook(data) {
   const userId = localStorage.getItem('userId');
   let newData;
   const book = {
@@ -165,6 +167,7 @@ export async function updateBook(data, id) {
     genre: data.genre,
   };
   console.log(data.file[0]);
+  console.log(data);
   if (data.file[0]) {
     newData = new FormData();
     newData.append('book', JSON.stringify(book));
@@ -176,7 +179,8 @@ export async function updateBook(data, id) {
   try {
     const newBook = await axios({
       method: 'put',
-      url: `${API_ROUTES.BOOKS}/${userId}`,
+      // eslint-disable-next-line dot-notation
+      url: `${API_ROUTES.BOOKS}/${data['_id']}`,
       data: newData,
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,

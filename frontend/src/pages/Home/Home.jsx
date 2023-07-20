@@ -14,7 +14,6 @@ function Home() {
   useEffect(() => {
     async function getBooksList() {
       const data = await getBooks();
-      console.log('texte', data);
       if (data) {
         setBooks(data);
         setLoading(false);

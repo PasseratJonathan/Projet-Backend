@@ -2,9 +2,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path')
 const cors = require('cors')
+const sharp = require('sharp')
 
 const bookRoutes = require('./routes/books')
 const userRoutes = require('./routes/user')
+
 
 mongoose.connect('mongodb+srv://Jo:TTvcKPG54AKu4UZ8@jo.lfzl16r.mongodb.net/test?retryWrites=true&w=majority',
   { useNewUrlParser: true,
@@ -14,7 +16,7 @@ mongoose.connect('mongodb+srv://Jo:TTvcKPG54AKu4UZ8@jo.lfzl16r.mongodb.net/test?
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({limit: '50mb'}));
 
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -31,6 +33,7 @@ app.use((err, req, res, next) => {
   console.error(err);
   res.status(500).json({ error: 'Erreur serveur' });
 });
+
 app.use('/api/books', bookRoutes)
 app.use('/api/auth', userRoutes)
 app.use('/images', express.static(path.join(__dirname, 'images')))
