@@ -40,25 +40,45 @@ exports.createBook = async (req, res) => {
   }
 };
 
-exports.modifyBook = (req, res) => {
-    const bookObject = req.file ? {
-      ...JSON.parse(req.body.book),
-      imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
-    } : { ...req.body }
-    Book.findOne({_id: req.params.id})
-    .then((book) => {
+exports.modifyBook = async (req, res) => {
+  let bookObject = req.file
+    ? {
+        ...JSON.parse(req.body.book),
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
+      }
+    : { ...req.body };
+
+  if (req.file) {
+    const processedImageFilename = `${req.file.filename.split('.')[0]}_sharp.jpg`;
+    const processedImagePath = path.join(__dirname, '../images', processedImageFilename);
+
+    await sharp(req.file.path)
+      .resize(600)
+      .toFile(processedImagePath);
+
+    fs.unlinkSync(req.file.path);
+
+    bookObject.imageUrl = `${req.protocol}://${req.get('host')}/images/${processedImageFilename}`;
+  }
+
+  Book.findOne({ _id: req.params.id })
+    .then(async (book) => {
       if (book.userId != req.auth.userId) {
-        res.status(401).json({ message: 'Non-autorisé'})
+        res.status(401).json({ message: 'Non-autorisé' });
       } else {
-        Book.updateOne({ _id: req.params.id}, { ...bookObject, _id: req.params.id})
-        .then(() => res.status(200).json({message : 'Objet Modifié !'}))
-        .catch(error => res.status(401).json({ error }))
+        if (req.file) {
+          const existingImagePath = path.join(__dirname, '../images', book.imageUrl.split('/').pop());
+          fs.unlinkSync(existingImagePath);
+        }
+
+        await Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id });
+        res.status(200).json({ message: 'Objet Modifié !' });
       }
     })
     .catch((error) => {
-      res.status(400).json({ error })
-    })
-  }
+      res.status(400).json({ error });
+    });
+};
 
 exports.deleteBook = (req, res) => {
     Book.findOne({ _id: req.params.id })
