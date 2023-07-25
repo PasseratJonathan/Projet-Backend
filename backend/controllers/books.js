@@ -19,9 +19,11 @@ exports.createBook = async (req, res) => {
       .toFile(processedImagePath);
 
     fs.unlinkSync(req.file.path);
+    fs.renameSync( processedImagePath, req.file.path )
+    console.log( processedImagePath, req.file.path )
     const book = new Book({
       ...bookObject,
-      imageUrl: `${req.protocol}://${req.get('host')}/images/${processedImageFilename}`,
+      imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
       userId: req.auth.userId,
     });
 
@@ -41,43 +43,57 @@ exports.createBook = async (req, res) => {
 };
 
 exports.modifyBook = async (req, res) => {
-  let bookObject = req.file
-    ? {
-        ...JSON.parse(req.body.book),
-        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
-      }
-    : { ...req.body };
-
-  if (req.file) {
-    const processedImageFilename = `${req.file.filename.split('.')[0]}_sharp.jpg`;
-    const processedImagePath = path.join(__dirname, '../images', processedImageFilename);
-
-    await sharp(req.file.path)
-      .resize(600)
-      .toFile(processedImagePath);
-
-    fs.unlinkSync(req.file.path);
-
-    bookObject.imageUrl = `${req.protocol}://${req.get('host')}/images/${processedImageFilename}`;
-  }
-
-  Book.findOne({ _id: req.params.id })
-    .then(async (book) => {
-      if (book.userId != req.auth.userId) {
-        res.status(401).json({ message: 'Non-autorisé' });
-      } else {
-        if (req.file) {
-          const existingImagePath = path.join(__dirname, '../images', book.imageUrl.split('/').pop());
-          fs.unlinkSync(existingImagePath);
+  try {
+    let bookObject = req.file
+      ? {
+          ...JSON.parse(req.body.book),
+          imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
         }
+      : { ...req.body };
 
-        await Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id });
-        res.status(200).json({ message: 'Objet Modifié !' });
-      }
-    })
-    .catch((error) => {
-      res.status(400).json({ error });
-    });
+    if (req.file) {
+      const processedImageFilename = `${req.file.filename.split('.')[0]}_sharp.jpg`;
+      const processedImagePath = path.join(__dirname, '../images', processedImageFilename);
+
+      await sharp(req.file.path)
+        .resize(600)
+        .toFile(processedImagePath);
+
+      fs.unlinkSync(req.file.path);
+      fs.renameSync( processedImagePath, req.file.path )
+
+      bookObject.imageUrl = `${req.protocol}://${req.get('host')}/images/${req.file.filename}`;
+    }
+
+    const book = await Book.findById(req.params.id);
+    if (!book) {
+      return res.status(404).json({ message: 'Livre non trouvé' });
+    }
+
+    if (book.userId != req.auth.userId) {
+      return res.status(401).json({ message: 'Non-autorisé' });
+    }
+
+    if (req.file)  {
+      try {
+      const existingImagePath = path.join(__dirname, '../images', book.imageUrl.split('/').pop());
+      console.log(existingImagePath)
+      fs.unlinkSync(existingImagePath);
+      } catch (e) {console.error(e)}
+    }
+
+    book.title = bookObject.title;
+    book.author = bookObject.author;
+    book.description = bookObject.description;
+    book.imageUrl = bookObject.imageUrl;
+
+    await book.save();
+
+    res.status(200).json({ message: 'Livre modifié avec succès' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur lors de la modification du livre' });
+  }
 };
 
 exports.deleteBook = (req, res) => {
@@ -133,37 +149,35 @@ exports.getAllBooks = (req, res) => {
   exports.addNotation = (req, res) => {
     const { userId, rating } = req.body;
   
-    Book.aggregate([
-      { $match: { _id: req.params.id } },
-      { $unwind: "$ratings" },
-      {
-        $group: {
-          _id: null,
-          totalRating: { $sum: "$ratings.grade" },
-          ratingCount: { $sum: 1 },
-        },
-      },
-      {
-        $project: {
-          _id: 0,
-          averageRating: { $divide: ["$totalRating", "$ratingCount"] },
-        },
-      },
-    ])
-      .then(results => {
-        const ratings = results[0]?.ratings?.map(r => r.grade) || []
-        ratings.push(rating)
-        const averageRating = ratings.length > 0 ? ratings.reduce((sum, currentGrade) => sum + currentGrade, 0) / ratings.length : 0;
+    // Convertir la note en nombre entier
+    const newRating = parseInt(rating, 10);
+    if (isNaN(newRating) || newRating < 0 || newRating > 5) {
+      return res.status(400).json({ message: 'La note doit être comprise entre 0 et 5' });
+    }
   
-        Book.findOneAndUpdate(
-          { _id: req.params.id },
-          { $push: { ratings: { userId, grade: rating } }, averageRating },
-          { new: true }
-        )
+    // Récupérer le livre et ses notes actuelles
+    Book.findById(req.params.id)
+      .then(book => {
+        if (!book) {
+          return res.status(404).json({ message: 'Livre non trouvé' });
+        }
+  
+        // Vérifier si l'utilisateur a déjà noté ce livre
+        const userRating = book.ratings.find(r => r.userId === userId);
+        if (userRating) {
+          return res.status(400).json({ message: 'Vous avez déjà noté ce livre' });
+        }
+  
+        // Ajouter la nouvelle notation au tableau "ratings" du livre
+        book.ratings.push({ userId, grade: newRating });
+  
+        // Recalculer la note moyenne ("averageRating")
+        const totalRating = book.ratings.reduce((sum, r) => sum + r.grade, 0);
+        book.averageRating = totalRating / book.ratings.length;
+  
+        // Sauvegarder le livre mis à jour dans la base de données
+        book.save()
           .then(updatedBook => {
-            if (!updatedBook) {
-              return res.status(404).json({ message: 'Livre non trouvé' });
-            }
             res.status(200).json(updatedBook);
           })
           .catch(error => {
