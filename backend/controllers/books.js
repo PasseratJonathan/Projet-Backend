@@ -20,7 +20,6 @@ exports.createBook = async (req, res) => {
 
     fs.unlinkSync(req.file.path);
     fs.renameSync( processedImagePath, req.file.path )
-    console.log( processedImagePath, req.file.path )
     const book = new Book({
       ...bookObject,
       imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`,
@@ -71,13 +70,12 @@ exports.modifyBook = async (req, res) => {
     }
 
     if (book.userId != req.auth.userId) {
-      return res.status(401).json({ message: 'Non-autorisé' });
+      return res.status(401).json({ error });
     }
 
     if (req.file)  {
       try {
       const existingImagePath = path.join(__dirname, '../images', book.imageUrl.split('/').pop());
-      console.log(existingImagePath)
       fs.unlinkSync(existingImagePath);
       } catch (e) {console.error(e)}
     }
@@ -91,8 +89,7 @@ exports.modifyBook = async (req, res) => {
 
     res.status(200).json({ message: 'Livre modifié avec succès' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Erreur lors de la modification du livre' });
+    res.status(500).json({ error });
   }
 };
 
@@ -129,7 +126,6 @@ exports.getAllBooks = (req, res) => {
     .catch(error => {
       console.log(error)
     })
-    
   }
 
   exports.getBestRating = (req, res) => {
@@ -144,38 +140,31 @@ exports.getAllBooks = (req, res) => {
         console.log(error);
         res.status(400).json({ error });
       });
-  };
+  }
 
   exports.addNotation = (req, res) => {
     const { userId, rating } = req.body;
   
-    // Convertir la note en nombre entier
     const newRating = parseInt(rating, 10);
     if (isNaN(newRating) || newRating < 0 || newRating > 5) {
       return res.status(400).json({ message: 'La note doit être comprise entre 0 et 5' });
     }
   
-    // Récupérer le livre et ses notes actuelles
     Book.findById(req.params.id)
       .then(book => {
         if (!book) {
           return res.status(404).json({ message: 'Livre non trouvé' });
         }
   
-        // Vérifier si l'utilisateur a déjà noté ce livre
         const userRating = book.ratings.find(r => r.userId === userId);
         if (userRating) {
           return res.status(400).json({ message: 'Vous avez déjà noté ce livre' });
         }
-  
-        // Ajouter la nouvelle notation au tableau "ratings" du livre
         book.ratings.push({ userId, grade: newRating });
   
-        // Recalculer la note moyenne ("averageRating")
         const totalRating = book.ratings.reduce((sum, r) => sum + r.grade, 0);
         book.averageRating = totalRating / book.ratings.length;
   
-        // Sauvegarder le livre mis à jour dans la base de données
         book.save()
           .then(updatedBook => {
             res.status(200).json(updatedBook);

@@ -31,7 +31,7 @@ app.use(cors({
 }));
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ error: 'Erreur serveur' });
+  res.status(500).json({ err });
 });
 
 app.use('/api/books', bookRoutes)
