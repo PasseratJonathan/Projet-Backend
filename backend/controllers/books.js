@@ -29,15 +29,6 @@ exports.createBook = async (req, res) => {
     await book.save();
 
     res.status(201).json({ message: 'Objet enregistré' });
-  } else {
-    const book = new Book({
-      ...bookObject,
-      userId: req.auth.userId,
-    });
-
-    await book.save();
-
-    res.status(201).json({ message: 'Objet enregistré' });
   }
 };
 
@@ -82,7 +73,8 @@ exports.modifyBook = async (req, res) => {
 
     book.title = bookObject.title;
     book.author = bookObject.author;
-    book.description = bookObject.description;
+    book.year = bookObject.year;
+    book.genre = bookObject.genre;
     book.imageUrl = bookObject.imageUrl;
 
     await book.save();

@@ -45,7 +45,6 @@ function BookForm({ book, validate }) {
 
   const onSubmit = async (data) => {
     // eslint-disable-next-line
-    console.log(!book);
     if (!book) {
       if (!data.file[0]) {
         alert('Vous devez ajouter une image');
